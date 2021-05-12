@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib import colors
+from matplotlib import pyplot as plt
 
 
 def skin_detection(imagem):
@@ -22,6 +22,25 @@ def skin_detection(imagem):
     skin = cv.bitwise_and(imagem, imagem, mask=skinMask)
     # mostra a pele da imagem
     return skin
+
+
+def face_detect(imagem):
+    # carreguar a fotografia
+    pixels = cv.imread('imagens/entrada/' + str(imagem) + '.png')
+    # carreguar o modelo pré-treinado
+    classifier = cv.CascadeClassifier('haarcascade_frontalface_default.xml')
+    # realizar detecção de rosto
+    bboxes = classifier.detectMultiScale(pixels)
+    # imprimir caixa delimitadora para cada rosto detectado
+    for box in bboxes:
+        # extrair
+        x, y, width, height = box
+        x2, y2 = x + width, y + height
+        # desenhar um retângulo sobre os pixels
+        cv.rectangle(pixels, (x, y), (x2, y2), (0, 255, 0), 1)
+        # BGR
+    # salva a imagem
+    cv.imwrite('imagens/saida/' + str(imagem) + '_face_detect.png', pixels)
 
 
 def RGB_color_space(imagem):
