@@ -205,3 +205,72 @@ def hair_quantization(imagem):
         for j in range(imagem.shape[1]):
             imagem[i][j] = int(imagem[i][j] / proporcao) * proporcao
     return imagem
+
+
+def pixel_square(imagem):
+    kernel = np.ones((5, 5), np.uint8)
+    img_erosion = cv.erode(imagem, kernel, iterations=1)
+    img_dilation = cv.dilate(imagem, kernel, iterations=1)
+    return img_dilation
+
+
+def image_components(imagem):
+    img = cv.threshold(imagem, 127, 255, cv.THRESH_BINARY)[1]  # ensure binary
+    num_labels, labels_im = cv.connectedComponents(img)
+    label_hue = np.uint8(179 * labels_im / np.max(labels_im))
+    blank_ch = 255 * np.ones_like(label_hue)
+    labeled_img = cv.merge([label_hue, blank_ch, blank_ch])
+    labeled_img = cv.cvtColor(labeled_img, cv.COLOR_HSV2BGR)
+    labeled_img[label_hue == 0] = 0
+    return labeled_img
+
+
+def center_of_gravity(imagem):
+    imgray = cv.cvtColor(imagem, cv.COLOR_BGR2GRAY)
+    ret, thresh = cv.threshold(imgray, 127, 255, 0, cv.THRESH_BINARY_INV | cv.THRESH_OTSU)
+    _, contours, hierarchy = cv.findContours(thresh, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+
+    cnts = cv.drawContours(imagem, contours[0], -1, (0, 255, 0), 1)
+
+    kpCnt = len(contours[0])
+
+    x = 0
+    y = 0
+
+    for kp in contours[0]:
+        x = x + kp[0][0]
+        y = y + kp[0][1]
+
+    cv.circle(imagem, (np.uint8(np.ceil(x / kpCnt)), np.uint8(np.ceil(y / kpCnt))), 1, (0, 0, 255), 3)
+
+    return cnts
+
+
+def extreme_outer_points(imagem):
+    gray = cv.cvtColor(imagem, cv.COLOR_BGR2GRAY)
+    blur = cv.GaussianBlur(gray, (3, 3), 0)
+    thresh = cv.threshold(blur, 220, 255, cv.THRESH_BINARY_INV)[1]
+
+    # Encontrar contornos
+    cnts = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    c = max(cnts, key=cv.contourArea)
+
+    # Obter coordenadas externas
+    left = tuple(c[c[:, :, 0].argmin()][0])
+    right = tuple(c[c[:, :, 0].argmax()][0])
+    top = tuple(c[c[:, :, 1].argmin()][0])
+    bottom = tuple(c[c[:, :, 1].argmax()][0])
+
+    # Desenhar pontos na imagem
+    cv.drawContours(imagem, [c], -1, (36, 255, 12), 2)
+    cv.circle(imagem, left, 8, (0, 50, 255), -1)
+    cv.circle(imagem, right, 8, (0, 255, 255), -1)
+    cv.circle(imagem, top, 8, (255, 50, 0), -1)
+    cv.circle(imagem, bottom, 8, (255, 255, 0), -1)
+
+    print(f'Esquerda: {left}')
+    print(f'Direita: {right}')
+    print(f'Em cima: {top}')
+    print(f'Em baixo: {bottom}')
+    return thresh, left, right, top, bottom
